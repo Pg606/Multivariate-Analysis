@@ -1,0 +1,148 @@
+---
+title: "Multivariate Analysis Assignment 1"
+author: "pg606@scarletmail.rutgers.edu"
+date: "2024-02-12"
+output: html_document
+---
+                                                  Assignment 1
+
+
+
+1. Question to be analyzed on this dataset.
+
+
+•	What factors have the most significant impact on salaries in the data science field?
+
+
+•	What role does company size play in determining data science salaries, and are there noticeable differences in compensation levels between small, medium, and large companies within the industry?
+
+
+
+2. Why this question is important to me?
+
+
+This question is crucial for me, as a master's student entering the job market in 2025, it helps to identify the key factors influencing salaries in the data science field. Understanding how job characteristics, geographical location, company attributes, and industry specialization impact compensation that will allow me to make informed career choices, negotiate effectively, and strategically position myself for financial and professional growth in the rapidly evolving data science industry.
+
+
+3. Data Collected- Dependent and Independent Variable
+
+
+Dependent Variable:
+
+Salary (in USD)
+
+
+
+Independent Variable:
+
+Job Title
+
+Experience Level
+
+Employment Type
+
+Work Setting
+
+Company Location
+
+Company Size
+
+4. Data Dictionary for the dataset -
+
+
+work_year:
+
+Description: Indicates the year the data was recorded
+
+Type: Integer
+
+Example: 2023
+
+job_title:
+
+Description: Specifies the specific job role 
+
+Type: String (Nominal)
+
+Example: Data Scientist
+
+job_category:
+
+Description: Classifies the job role into broader categories
+
+Type: String (Nominal)
+
+Example: Data Analysis
+
+salary_currency:
+
+Description: Represents the currency the salary is paid (e.g., USD, EUR)
+
+Type: String (Nominal)
+
+Example: USD
+
+Salary:
+
+Description: Provides the annual gross salary of the role in the local currency.
+
+Type: Numeric (Continuous)
+
+Example: 60000.00
+
+salary_in_usd:
+
+Description: Presents the annual gross salary converted to United States Dollars
+(USD)
+Type: Numeric (Continuous)
+
+Example: 60000.00
+
+employee_residence:
+
+Description: Specifies the team member's country of residence
+
+Type: String (Nominal)
+
+Example: USA
+
+experience_level:
+
+Description: Classifies the professional experience level into categories 
+
+Type: String (Ordinal)
+
+Example: Mid-level
+
+employment_type:
+
+Description: Specifies the type of employment.
+
+Type: String (Nominal)
+
+Example: Full-time
+
+work_setting:
+
+Description: Describes the work setting or environment.
+
+Type: String (Nominal)
+
+Example: Remote
+
+company_location:
+
+Description: Indicates the country where the company is located.
+
+Type: String (Nominal)
+
+Example: USA
+
+company_size:
+
+Description: Represents the size of the employer company.
+
+Type: String (Ordinal)
+
+Example: Medium
+
