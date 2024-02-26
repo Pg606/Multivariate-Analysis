@@ -1,5 +1,5 @@
 ---
-title: "Temp"
+title: "Multivariate and Univariate"
 author: "pg606@scarletmail.rutgers.edu"
 date: "2024-02-26"
 output: html_document
@@ -109,10 +109,10 @@ sprintf("d-values for Low salary level: Mean = %2.3f, Variance = %2.3f",mean(d.a
 
 ```
 
+#Insight: This process helps identify and quantify the differences in the distribution of standardized variables between high and low salary levels.
 
 
-
-
+#Question: How does Levene's test assess the equality of variances between different groups defined by the Salary_Level variable?
 
 
 ```{r}
@@ -124,8 +124,9 @@ leveneTest(salary ~ Salary_Level, data=dataset)
 leveneTest(salary_in_usd ~ Salary_Level, data=dataset)
 ```
 
+#Insight: Levene's test evaluates the equality of variances between different groups by comparing the dispersion of data within each group. It provides valuable insights into the consistency of variance across groups, aiding in the selection of appropriate statistical analyses and ensuring the validity of statistical inferences.
 
-
+#Question: How are the results of ANOVA summarized and interpreted in terms of between-group differences in mean salary and salary in USD?
 
 
 
@@ -135,7 +136,9 @@ leveneTest(salary_in_usd ~ Salary_Level, data=dataset)
 summary(aov(salary ~ Salary_Level))
 summary(aov(salary_in_usd ~ Salary_Level))
 ```
+#Insight: This information is crucial for understanding and addressing disparities in compensation practices within the organization.
 
+#Question:  How does the Mahalanobis distance assist in identifying outliers or unusual observations in the dataset?
 
 ```{r cars}
 # mahalanobis
@@ -146,7 +149,7 @@ dataset_MD
 dataset$pvalues <- pchisq(dataset_MD, df=3, lower.tail=FALSE)
 dataset
 ```
-
+#Insight:  the Mahalanobis distance assists in identifying outliers or unusual observations in a dataset by considering both the distance of a data point from the centroid and the variability of the data along each dimension. 
 
 
 ```{r}
@@ -156,7 +159,7 @@ library(biotools)
 boxM(dataset[,5:6],Salary_Level)
 ```
 
-
+#Question: How do the MANOVA results complement or contrast with other statistical tests conducted in the analysis, such as ANOVA and t-tests?
 
 
 ```{r}
@@ -169,3 +172,4 @@ manova_result <- manova(cbind(salary, salary_in_usd) ~ Salary_Level, data = data
 # Summary of MANOVA results
 summary(manova_result)
 ```
+#Insight:  MANOVA results complement other tests by providing a comprehensive assessment of group differences across multiple dependent variables, while also highlighting unique insights into the overall effect of the independent variable on the multivariate response.
