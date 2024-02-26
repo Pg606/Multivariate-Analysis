@@ -1,0 +1,171 @@
+---
+title: "Temp"
+author: "pg606@scarletmail.rutgers.edu"
+date: "2024-02-26"
+output: html_document
+---
+
+```{r}
+dataset <- read.csv("/Users/Prateekg/Downloads/Dataset_with_Salary_Level.csv")
+
+dataset_x <- dataset[, 5:6]
+dataset_x
+dataset_cm <- colMeans(dataset_x)
+dataset_S <- cov(dataset_x)
+dataset_d <- apply(dataset_x, MARGIN = 1, function(dataset_x)t(dataset_x - dataset_cm) %*% solve(dataset_S) %*% (dataset_x - dataset_cm))
+dataset_cm
+dataset_S
+dataset_d
+```
+
+#Question-How are the t-tests conducted to compare salaries between high and low salary levels both in regular salary and salary in USD?
+
+
+```{r}
+# t-tests, one by one. Survivors vs. Non survivors
+with(data=dataset,t.test(salary[Salary_Level=="High"],salary[Salary_Level=="Low"],var.equal=TRUE))
+with(data=dataset,t.test(salary_in_usd[Salary_Level=="High"],salary_in_usd[Salary_Level=="Low"],var.equal=TRUE))
+
+```
+#Insight: It is conducted to assess whether there is a statistically significant difference in salaries between the two groups.
+
+#Question: What insights can be gained from the output of the hotelling.test function, and how are these insights relevant to the analysis of salary and salary in USD across different salary levels?
+
+
+```{r}
+library(Hotelling)
+t2testsparr <- hotelling.test(salary + salary_in_usd ~ Salary_Level, data=dataset)
+# Output of the function hotelling.test is given
+cat("T2 statistic =",t2testsparr$stat[[1]],"\n")
+print(t2testsparr)
+#  T2 statistic is located in the first element of the list "stat"
+
+# testing Variation
+# F-test for Total length (not recommended)
+var.test(dataset$salary[dataset$Salary_Level=="High"],dataset$salary[dataset$Salary_Level=="Low"])
+attach(dataset)
+var.test(dataset$salary[dataset$Salary_Level=="High"],dataset$salary[dataset$Salary_Level=="Low"])
+
+```
+#Insight: The test considers both salary and salary in USD simultaneously, providing a comprehensive assessment of the differences between the two salary levels across multiple variables.
+
+#Question: How are the mean absolute median differences calculated for the standardized dataset, both for high and low salary levels?
+
+
+
+```{r}
+# Levene's tests based on absolute differences around means using t-tests. Standarizing the sparrows data set with scale()
+
+matstand <- scale(dataset[,5:6])
+matstand
+matsurv <- matstand[Salary_Level == "High",]
+matsurv
+matnosurv <- matstand[Salary_Level == "Low",]
+vecmediansurv <- apply(matsurv, 2, median)
+# in the above 2 represents column. Hence, we are asking for column median
+vecmediansurv
+
+vecmediannosurv <- apply(matnosurv, 2, median)
+matabsdevsurv <- abs(matsurv - matrix(rep(vecmediansurv,nrow(matsurv)),nrow=nrow(matsurv), byrow=TRUE))
+
+matabsdevnosurv <- abs(matnosurv - matrix(rep(vecmediannosurv,nrow(matnosurv)),nrow=nrow(matnosurv), byrow=TRUE))
+
+matabsdevnosurv
+
+matabsdev.all <- rbind(matabsdevsurv,matabsdevnosurv)
+matabsdev.all <- data.frame(Salary_Level, matabsdev.all)
+
+t.test(matabsdev.all$salary[Salary_Level == "High"],matabsdev.all$salary[Salary_Level == "Low"], alternative="less",var.equal = TRUE)
+
+t.test(matabsdev.all$salary_in_usd[Salary_Level == "High"],matabsdev.all$salary_in_usd[Salary_Level == "Low"], alternative="less",var.equal = TRUE)
+
+
+matstand
+
+matstand.all <- data.frame(Salary_Level, matstand)
+colnames(matstand.all) <- colnames(dataset[1:3])
+t2testsparr <- hotelling.test(salary + salary_in_usd ~ Salary_Level,data=matstand.all)
+cat("T2 statistic =",t2testsparr$stat[[1]],"\n")
+print(t2testsparr)
+
+# In the above we standardized using scale function
+matabsdev.all
+
+# We can also look at Van Valen's test. Equivalent to the comparison of mean absolute median
+# diferences between two groups. In the sparrows' example, the Van Valen's test
+# is one-sided (Mean dij for survivors < Mean dij for non-survivors)
+# dij is the norm of the individual vector i composed by the absolute
+# deviations computed for all the variables in sample j.
+# These norms define the second column of the data frame d.all
+
+d.all <- data.frame(Salary_Level,sqrt(rowSums(matabsdev.all[,-1]^2)))
+d.all
+colnames(d.all)[2] <- "dij"
+d.all
+head(d.all)
+with(d.all, t.test(dij[Salary_Level=="High"], dij[Salary_Level=="Low"],var.equal=TRUE, alternative="less"))
+sprintf("d-values for High Salary Level: Mean = %2.3f, Variance = %2.3f",mean(d.all$dij[Salary_Level=="High"]),var(d.all$dij[Salary_Level=="High"]))
+sprintf("d-values for Low salary level: Mean = %2.3f, Variance = %2.3f",mean(d.all$dij[Salary_Level=="Low"]),var(d.all$dij[Salary_Level=="Low"]))
+
+```
+
+
+
+
+
+
+
+```{r}
+# Leverne test is used to verify Homoscedasticity. It tests if the variance of two samples are # #equal. Levene's test is an inferential statistic used to assess the equality of variances for a #variable calculated for two or more groups.[1] Some common statistical procedures assume that #variances of the populations from which different samples are drawn are equal. Levene's test #assesses this assumption.
+
+library(car)
+leveneTest(salary ~ Salary_Level, data=dataset)
+#leveneTest() produces a two-sided test
+leveneTest(salary_in_usd ~ Salary_Level, data=dataset)
+```
+
+
+
+
+
+
+
+```{r}
+# ANOVA
+summary(aov(salary ~ Salary_Level))
+summary(aov(salary_in_usd ~ Salary_Level))
+```
+
+
+```{r cars}
+# mahalanobis
+library(stats)
+
+dataset_MD <- mahalanobis(dataset_x, dataset_cm, dataset_S)
+dataset_MD
+dataset$pvalues <- pchisq(dataset_MD, df=3, lower.tail=FALSE)
+dataset
+```
+
+
+
+```{r}
+# BoxM
+
+library(biotools)
+boxM(dataset[,5:6],Salary_Level)
+```
+
+
+
+
+```{r}
+# MANOVA
+dataset$Salary_Level <- as.factor(dataset$Salary_Level)
+
+# Run MANOVA analysis
+manova_result <- manova(cbind(salary, salary_in_usd) ~ Salary_Level, data = dataset)
+
+# Summary of MANOVA results
+summary(manova_result)
+```
