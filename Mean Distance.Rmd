@@ -1,0 +1,30 @@
+---
+title: "Mean Distance"
+author: "pg606@scarletmail.rutgers.edu"
+date: "2024-03-25"
+output: html_document
+---
+
+```{r}
+library(readr)
+dataset <- read.csv("/Users/Prateekg/Downloads/Midterm.csv")
+dataset
+```
+
+
+
+```{r}
+# Compute mean and covariance matrix
+mean_vec <- colMeans(dataset[, -1])
+cov_mat <- cov(dataset[, -1])
+```
+
+
+
+```{r}
+# Compute MVA distance
+mva_dist <- mahalanobis(dataset[, -1], mean_vec, cov_mat)
+# Output MVA distances
+mva_dist
+```
+
