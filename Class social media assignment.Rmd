@@ -1,0 +1,509 @@
+---
+title: "Class Social Media Assignment"
+author: "pg606@scarletmail.rutgers.edu"
+date: "2024-03-29"
+output: html_document
+---
+
+
+```{r}
+library(psych)
+library(readr)
+## Warning: package 'readr' was built under R version 4.3.2
+library(factoextra)
+
+library(FactoMineR)
+## Warning: package 'FactoMineR' was built under R version 4.3.3
+library(magrittr)
+library(NbClust)
+library(readr)
+library(lattice)
+library(ggplot2)
+library(ggridges)
+library(ggvis)
+library(ggthemes)
+library(cowplot)
+library(gapminder)
+library(dplyr)
+library(tidyverse)
+library(grid)
+library(gridExtra)
+library(RColorBrewer)
+library(cluster)
+library(readr)
+library(factoextra)
+library(magrittr)
+library(NbClust)
+library(ggplot2) # for visualization
+library(reshape2) # for data manipulation
+library(factoextra)
+library(FactoMineR)
+library(psych)
+library(corrplot)
+library(devtools)
+
+```
+
+
+DATASET DESCRIPTION :
+
+
+```{r}
+#ABOUT THE DATASET
+
+```
+
+
+
+```{r}
+
+l_d <- read.csv("/Users/Prateekg/Downloads/Midterm_Final.csv", row.names=1)
+
+
+```
+
+
+
+The correlation matrix provides insight into the relationships between different variables. In this case, the correlation matrix displays the correlations between different social media usage measurements (LinkedIn, Snapchat, Twitter, WhatsApp, Youtube, OTT, Reddit).
+
+```{r}
+
+#Get the Correlations between the measurements
+
+correlation_matrix <- cor(l_d[,1:8][-1])
+correlation_matrix
+
+```
+
+•	A correlation coefficient close to 1 indicates a strong positive relationship, while a coefficient close to -1 indicates a strong negative relationship.
+•	A correlation coefficient close to 0 indicates no linear relationship between the variables.
+
+```{r}
+# Visualize correlation matrix
+ggplot(melt(correlation_matrix), aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "green", high = "blue", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Correlation") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 10, hjust = 1)) +
+  coord_fixed()
+
+```
+
+
+For Example :
+
+LinkedIn.Usage vs. Snapchat.Usage: A moderate positive correlation (0.3254), suggesting that as LinkedIn usage increases, Snapchat usage tends to increase as well, but not strongly.
+LinkedIn.Usage vs. Twitter.Usage: A weak negative correlation (-0.0934), indicating a slight negative relationship between LinkedIn and Twitter usage.
+LinkedIn.Usage vs. Whatsapp.Usage: A moderate positive correlation (0.2258), indicating a moderate tendency for LinkedIn and WhatsApp usage to increase together.
+ and so on..
+
+These correlations provide insights into the relationships between different social media usage variables, which can be further explored through principal component analysis (PCA) to identify underlying patterns and reduce the dimensionality of the data.
+
+
+# PCA
+
+
+• PCA facilitates the reduction of dataset dimensionality while preserving the majority of variability inherent in the original data.
+• It discerns patterns and correlations among various metrics of social media usage, potentially revealing fundamental factors shaping these patterns.
+• The findings imply that the initial principal components elucidate a considerable proportion of the variability in social media usage behaviors, hinting at potential underlying drivers of these behaviors.
+```{r}
+l_d_pca <- prcomp(l_d[,1:8][,-1],scale=TRUE) 
+l_d_pca
+summary(l_d_pca)
+```
+
+• The standard deviations denote the variability encapsulated by each principal component (PC).
+• PC1 exhibits the highest standard deviation (1.4211), succeeded by PC2 (1.3815), suggesting that PC1 predominantly accounts for the variability in the data, closely trailed by PC2.
+
+The "Trouble_falling_asleep" column likely represents a categorical variable indicating the presence or absence of sleep initiation difficulties among individuals in the dataset.
+
+```{r}
+library(factoextra)
+
+
+
+# Eigenvalues are sdev^2
+(eigen_l_d <- l_d_pca$sdev^2)
+names(eigen_l_d) <- paste("PC",1:3,sep="")
+eigen_l_d
+sumlambdas <- sum(eigen_l_d)
+sumlambdas
+propvar <- eigen_l_d/sumlambdas
+propvar
+cumvar_l_d <- cumsum(propvar)
+cumvar_l_d
+matlambdas <- rbind(eigen_l_d,propvar,cumvar_l_d)
+rownames(matlambdas) <- c("Eigenvalues","Prop. variance","Cum. prop. variance")
+round(matlambdas,4)
+summary(l_d_pca)
+l_d_pca$rotation
+print(l_d_pca)
+l_d_pca$x
+
+
+l_dtyp_pca <- cbind(data.frame(l_d$Trouble_falling_asleep),l_d_pca$x)
+l_dtyp_pca
+
+
+
+# Means of scores 
+tabmeansPC <- aggregate(l_dtyp_pca[,2:4],by=list(Trouble_falling_asleep=l_d$Trouble_falling_asleep),mean)
+tabmeansPC
+tabmeansPC <- tabmeansPC[rev(order(tabmeansPC$Trouble_falling_asleep)),]
+tabmeansPC
+tabfmeans <- t(tabmeansPC[,-1])
+tabfmeans
+colnames(tabfmeans) <- t(as.vector(tabmeansPC[1]$Trouble_falling_asleep))
+tabfmeans
+
+
+
+
+
+# Standard deviations of scores 
+tabsdsPC <- aggregate(l_dtyp_pca[,2:4],by=list(Trouble_falling_asleep=l_d$Trouble_falling_asleep),sd)
+tabfsds <- t(tabsdsPC[,-1])
+colnames(tabfsds) <- t(as.vector(tabsdsPC[1]$Trouble_falling_asleep))
+tabfsds
+t.test(PC1~l_d$Trouble_falling_asleep,data=l_dtyp_pca)
+t.test(PC2~l_d$Trouble_falling_asleep,data=l_dtyp_pca)
+t.test(PC3~l_d$Trouble_falling_asleep,data=l_dtyp_pca)
+
+
+
+
+## F ratio tests
+var.test(PC1~l_d$Trouble_falling_asleep,data=l_dtyp_pca)
+var.test(PC2~l_d$Trouble_falling_asleep,data=l_dtyp_pca)
+var.test(PC3~l_d$Trouble_falling_asleep,data=l_dtyp_pca)
+
+
+
+
+# Levene's tests (one-sided)
+library(car)
+(LTPC1 <- leveneTest(PC1~l_d$Trouble_falling_asleep,data=l_dtyp_pca))
+(p_PC1_1sided <- LTPC1[[3]][1]/2)
+(LTPC2 <- leveneTest(PC2~l_d$Trouble_falling_asleep,data=l_dtyp_pca))
+(p_PC2_1sided=LTPC2[[3]][1]/2)
+(LTPC3 <- leveneTest(PC3~l_d$Trouble_falling_asleep,data=l_dtyp_pca))
+(p_PC3_1sided <- LTPC3[[3]][1]/2)
+```
+
+T-tests:
+
+T-tests have been performed to compare the means of the principal component scores between groups based on the variable "Trouble_falling_asleep" (Yes/No).
+For PC1 and PC2, the p-values are greater than 0.05, suggesting that there is no significant difference in the means between the groups.
+However, for PC3, the p-value is less than 0.05, indicating a significant difference in the means between the groups.
+Variance Homogeneity Tests:
+
+Levene's tests have been conducted to assess the homogeneity of variance for each principal component between the two groups.
+For PC1 and PC2, the p-values are greater than 0.05, indicating that there is no significant difference in variance between the groups.
+Similarly, for PC3, the p-value is also greater than 0.05, suggesting no significant difference in variance between the groups.
+
+
+
+
+
+
+```{r}
+# Different PCA Method. 
+res.pca <- PCA(l_d[,1:8][,-1], graph = FALSE)
+print(res.pca)
+
+fviz_eig(l_d_pca, addlabels = TRUE)
+
+plot(eigen_l_d, xlab = "Component number", ylab = "Component variance", type = "l", main = "Scree diagram")
+plot(log(eigen_l_d), xlab = "Component number",ylab = "log(Component variance)", type="l",main = "Log(eigenvalue) diagram")
+
+```
+•	PC1 accounts for 28.85% of the total variance, PC2 for 27.26%, and subsequent components account for decreasing proportions of variance.
+
+•	The cumulative proportion of variance explained by the principal components indicates how much of the total variance in the dataset is captured by each successive component. 
+
+•	In this case, the first two components capture over 56% of the total variance, while the first three components capture over 70.5%.
+
+
+```{r}
+fviz_pca_var(l_d_pca,col.var = "cos2",
+             gradient.cols = c("#FFCC00", "#CC9933", "#660033", "#330033"),
+             repel = TRUE)
+```
+
+
+```{r}
+fviz_pca_ind(l_d_pca, col.ind = "cos2", 
+             gradient.cols = c("#FFCC00", "#CC9933", "#660033", "#330033"), 
+             repel = TRUE)
+```
+
+
+
+```{r}
+
+biplot(l_d_pca)
+
+```
+
+
+
+```{r}
+fviz_pca_ind(res.pca,
+             geom.ind = "point", # show points only (nbut not "text")
+             col.ind = l_d$Trouble_falling_asleep, # color by groups
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+             addEllipses = TRUE, # Concentration ellipses
+             legend.title = "Groups"
+)
+```
+
+
+
+```{r}
+
+fviz_pca_ind(res.pca, col.ind = "cos2", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE # Avoid text overlapping (slow if many points)
+)
+
+
+```
+
+
+```{r}
+fviz_pca_biplot(res.pca, 
+                # Individuals
+                geom.ind = "point",
+                fill.ind = l_d$Trouble_falling_asleep, col.ind = "blue",
+                pointshape = 21, pointsize = 2,
+                palette = "jco",
+                addEllipses = TRUE,
+                # Variables
+                alpha.var ="contrib", col.var = "contrib",
+                gradient.cols = "RdYlBu",
+                
+                legend.title = list(fill = "Laid Off", color = "Contrib",
+                                    alpha = "Contrib")
+)
+
+
+
+
+```
+
+
+
+
+
+
+
+
+While PCA identifies linear combinations of variables that explain the maximum amount of variance, FA goes a step further by attempting to identify the underlying latent factors that explain the observed correlations between variables. This can provide more interpretable results by uncovering the theoretical constructs that drive the observed patterns in the data.
+
+
+
+# FACTOR ANALYSIS 
+
+
+It reveals the underlying structure of users' behavior across various social media platforms such as Instagram, LinkedIn, Snapchat, Twitter, WhatsApp, YouTube, OTT, and Reddit.
+```{r}
+#FACTOR ANALYSIS
+
+fit.pc <- principal(l_d[,1:8][-1], nfactors=4, rotate="varimax") 
+fit.pc
+round(fit.pc$values, 3)
+fit.pc$loadings
+
+# Communalities
+fit.pc$communality
+fit.pc$scores
+# Play with FA utilities
+
+```
+Variables with higher absolute loadings on a particular factor are more strongly associated with that factor.
+For instance, Twitter.Usage has a high loading on the first factor (RC1), suggesting that this factor represents usage patterns related to Twitter.
+Similarly, OTT has high loadings on multiple factors, indicating its association with different underlying constructs.
+
+
+
+```{r}
+
+fa.parallel(l_d[,1:8][-1]) # See factor recommendation
+fa.plot(fit.pc) # See Correlations within Factors
+fa.diagram(fit.pc) # Visualize the relationship
+vss(l_d[,1:8][-1]) # See Factor recommendations for a simple structure
+
+
+```
+Factor analysis revealed four latent factors (RC1, RC2, RC3, and RC4) derived from the social media dataset.
+•	RC1 represents high-usage social media platforms conducive to extensive content consumption and social interaction, encompassing Twitter, WhatsApp, and OTT services. 
+•	RC2 reflects platforms oriented towards learning and professional networking, exemplified by YouTube and LinkedIn.
+•	RC3 captures Snapchat's distinctive role, primarily focused on instant image sharing and communication. 
+•	RC4 highlights Reddit, known for its community-based discussions and content sharing. 
+
+
+# CLUSTER ANALYSIS
+
+Cluster analysis of the provided social media dataset enables the identification of distinct user segments based on their usage patterns across various platforms, facilitating a deeper understanding of user behavior and preferences.
+```{r}
+#CLUSTER ANALYSIS
+
+matstd.l_d <- scale(l_d[,1:8])
+l_d_scaled <- scale(l_d[,1:8])
+
+# Creating a (Euclidean) distance matrix of the standardized data 
+dist.l_d <- dist(matstd.l_d, method="euclidean")
+
+fviz_nbclust(matstd.l_d, kmeans, method ="wss")+geom_vline(xintercept = 4, linetype = 2)
+
+```
+
+•	By selecting four clusters, we aim to strike a balance between maximizing the homogeneity within clusters while minimizing the complexity of the segmentation. 
+•	With four clusters, we can effectively group users with similar usage patterns and behaviors.
+
+
+```{r}
+
+# Hierarchial Clusiering
+res.hc <- matstd.l_d %>% scale() %>% dist(method = "euclidean") %>%
+  hclust(method = "ward.D2")
+
+# Lets see what the optimal numbers of clusers are
+# Compute
+
+res.nbclust <- l_d[,1:8] %>% scale() %>% NbClust(distance = "euclidean", min.nc = 3, max.nc = 13, method = "complete", index ="all") 
+
+
+fviz_dend(res.hc, k = 4, # Cut in four groups
+          cex = 0.5, # label size
+          k_colors = c("#2E9FDF", "#00AFBB", "#E7B800", "#FC4E07"),
+          color_labels_by_k = TRUE, # color labels by groups
+          rect = TRUE # Add rectangle around groups
+)
+
+```
+•	There are around 20 items or observations in the dataset.
+•	These items have been grouped into approximately 4 clusters.
+•	The two items labeled “ki567” and “ak2001” are most similar to each other in the dataset
+•	The items labeled “MVA37@S” and “Harvey” are least similar to each other in the dataset according to the criteria used to create the dendrogram.
+
+```{r}
+
+set.seed(123)
+km.res <- kmeans(matstd.l_d, 3, nstart = 25)
+# Visualize
+fviz_cluster(km.res, data = matstd.l_d, ellipse.type = "convex",palette = "jco",ggtheme = theme_minimal())
+
+```
+•	The visualization of these clusters using fviz_cluster reveals the grouping of users into different segments characterized by their respective social media usage behaviors. 
+•	Each cluster, represented by ellipses, showcases the concentration of users with similar usage tendencies within the feature space defined by the standardized social media usage variables.
+
+
+
+
+```{r}
+
+# If your data has outliears , use PAM method
+pam.res <- pam(matstd.l_d, 3)
+# Visualize
+fviz_cluster(pam.res)
+
+
+```
+
+
+•	The Partitioning Around Medoids (PAM) clustering method is particularly suitable for datasets with outliers as it employs representative points (medoids) instead of means for cluster assignment. 
+•	In this context, the PAM algorithm was applied to the standardized social media dataset to create three clusters based on the medoids. 
+•	As shown, 15801 and masinl are the outliers in our dataset.
+
+# MY DATA COMPARED TO OTHERS:
+
+
+Z-scores allow us to understand how each student's social media usage compares to the overall distribution of usage for each platform. Positive z-scores indicate values above the mean, while negative z-scores indicate values below the mean.
+
+```{r}
+social_media_data1 <- read.csv("/Users/Prateekg/Downloads/Midterm_Final.csv")
+
+# Select the columns containing social media usage data
+social_media_data1 <- l_d[,1:8][, -1]  # Exclude the first column 
+
+# Calculate mean and standard deviation for each social media variable
+means <- colMeans(social_media_data1)
+std_devs <- apply(social_media_data1, 2, sd)
+
+# Calculate z-scores for each student
+z_scores <- scale(social_media_data1, center = means, scale=std_devs)
+
+print(z_scores)
+```
+
+#Based on the z-scores calculated for Patty:
+
+Patty's Instagram usage z-score is 1.383, indicating that Instagram usage is higher than the average user in the class.
+Patty's LinkedIn usage z-score is -0.503, suggesting that LinkedIn usage is slightly below the class average.
+Patty's Snapchat usage z-score is -0.430, indicating that Snapchat usage is slightly below the class average.
+Patty's Twitter usage z-score is -0.430, suggesting that Twitter usage is slightly below the class average.
+Patty's WhatsApp usage z-score is 1.080, indicating that WhatsApp usage is higher than the class average.
+Patty's Youtube usage z-score is -0.784, suggesting that YouTube usage is slightly below the class average.
+Patty's OTT (Over-the-Top) usage z-score is -0.088, indicating that OTT usage is close to the class average.
+Patty's Reddit usage z-score is -0.323, suggesting that Reddit usage is close to the class average.
+
+# TAKE AWAY 
+
+In the class, students can be categorized into two distinct groups based on their social media usage patterns. One group comprises students who spend significantly more time on various social media apps, while the other group consists of students who spend comparatively less time on these apps.
+
+Additionally, there are a few outliers within these groups, indicating students who exhibit extreme behavior by spending disproportionately more time on specific types of apps compared to their peers.
+The main lesson learned from this analysis is the need to decrease social media usage due to its potential impact on sleep and other aspects of our well-being. Below, I've outlined insights into how each platform can affect our sleep.
+
+```{r}
+library(dplyr)  # For data manipulation
+
+# Load the dataset
+social_media_data <- read.csv("/Users/Prateekg/Downloads/Midterm_Final.csv")
+# Remove irrelevant columns if any
+social_media_data <- social_media_data[, -1]  # Assuming the first column is ID and not needed
+
+# Check for missing values and handle them if necessary
+# social_media_data <- na.omit(social_media_data)
+
+# Separate data for individuals having trouble sleeping and those not having trouble sleeping
+trouble_sleeping <- social_media_data %>% filter(Trouble_falling_asleep == "Yes")
+no_trouble_sleeping <- social_media_data %>% filter(Trouble_falling_asleep == "No")
+
+# Calculate the variance for each group
+variance_trouble_sleeping <- apply(trouble_sleeping[, -9], 2, var)
+variance_no_trouble_sleeping <- apply(no_trouble_sleeping[, -9], 2, var)
+
+# Compare variances
+comparison <- data.frame(
+  Variable = colnames(social_media_data)[1:8],  # Assuming first 8 columns are variables
+  Variance_Trouble_Sleeping = variance_trouble_sleeping,
+  Variance_No_Trouble_Sleeping = variance_no_trouble_sleeping
+)
+
+# Print the comparison
+print(comparison)
+```
+
+From the comparison results:
+
+Instagram Usage: The variance of Instagram usage is higher among individuals having trouble sleeping compared to those not having trouble sleeping.
+
+LinkedIn Usage: Similarly, the variance of LinkedIn usage is higher among individuals having trouble sleeping compared to those not having trouble sleeping.
+
+Snapchat Usage: The variance of Snapchat usage is relatively similar between individuals having trouble sleeping and those not having trouble sleeping.
+
+Twitter Usage: Interestingly, the variance of Twitter usage is much higher among individuals not having trouble sleeping compared to those having trouble sleeping.
+
+WhatsApp Usage: The variance of WhatsApp usage is higher among individuals having trouble sleeping compared to those not having trouble sleeping.
+
+Youtube Usage: The variance of Youtube usage is higher among individuals not having trouble sleeping compared to those having trouble sleeping.
+
+OTT (Over-the-top media services): The variance of OTT usage is relatively similar between individuals having trouble sleeping and those not having trouble sleeping.
+
+Reddit: The variance of Reddit usage is higher among individuals having trouble sleeping compared to those not having trouble sleeping.
+
+
+
