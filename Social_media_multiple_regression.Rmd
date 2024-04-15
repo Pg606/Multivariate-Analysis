@@ -1,0 +1,301 @@
+---
+title: "Social_media_multiple_regression"
+author: "pg606@scarletmail.rutgers.edu"
+date: "2024-04-15"
+output: html_document
+---
+
+```{r }
+lay_data <- read.csv("/Users/Prateekg/Documents/MVA/Social_media.csv", row.names=1)
+
+str(lay_data)
+
+colnames(lay_data) <- c("Instagram", "LinkedIn", "Snapchat", "Twitter", "Whatsapp", "Youtube", "OTT", "Reddit", "Trouble_sleep", "Mood", "Tired_morning")
+
+
+```
+
+# MODEL DEVELOPMENT :
+
+```{r }
+# MODEL DEVELOPMENT 
+
+
+# Performing multiple regression on mtcars dataset
+fit <- lm(Trouble_sleep~Instagram + Snapchat + Twitter, data=lay_data) # LM- ASSUMES IT TO BE IT LINEAR, y(mpg)- many variables-output-residuals means error -median of the errors- median means real minus predicted
+
+
+#show the results
+summary(fit)
+
+```
+# MODEL FIT 
+
+INSIGHTS :
+The significance of each coefficient is determined by their respective t-values and p-values. A p-value below 0.05 indicates that the predictor variable significantly contributes to explaining the variability in trouble with sleep.
+
+```{r }
+fit <- lm(Trouble_sleep~Instagram + Snapchat + Twitter, data=lay_data)#removed the values that were 0.05
+# Useful Helper Functions
+coefficients(fit)
+library(GGally)
+ggpairs(data=lay_data, title="Social media Data")
+confint(fit,level=0.95)#confidence interval
+fitted(fit)
+
+
+```
+
+# RESIDUALS ANALYSIS
+
+
+```{r }
+residuals(fit)
+#Anova Table
+anova(fit)
+vcov(fit)
+cov2cor(vcov(fit))
+temp <- influence.measures(fit)#get to know abt outliers of data - makes * at the end
+temp
+plot(fit)
+
+library(car)
+outlierTest(fit)#current one shows outlier 
+leveragePlots(fit) # leverage plots
+# Influential Observations
+# added variable plots
+avPlots(fit)
+# Cook's D plot
+# identify D values > 4/(n-k-1)
+cutoff <- 4/((nrow(lay_data)-length(fit$coefficients)-2))
+plot(fit, which=4, cook.levels=cutoff)
+# Influence Plot
+influencePlot(fit, id.method="identify", main="Influence Plot", sub="Circle size is proportial to Cook's Distance" )
+# Normality of Residuals
+# qq plot for studentized resid
+qqPlot(fit, main="QQ Plot")
+
+```
+
+INSIGHTS : Residuals depict the disparities between the observed values of the response variable, Trouble_sleep, and those predicted by the regression model.
+
+For instance, individuals such as masinl, Patty, tl868, trave, ds2134, Harvey, ki567, MVA37@S exhibit negative residuals, implying that the predicted trouble with sleep exceeds the actual trouble with sleep for these cases. Conversely, individuals like peace, 19!@s, ak2001, vp1234, 15801 display positive residuals, suggesting that the predicted trouble with sleep falls short of the actual trouble with sleep for these individuals.
+
+```{r }
+library(MASS)
+sresid <- studres(fit)
+hist(sresid, freq=FALSE, main="Distribution of Studentized Residuals")
+xfit<-seq(min(sresid),max(sresid),length=40)
+yfit<-dnorm(xfit)
+lines(xfit, yfit)
+#Non-constant Error Variance
+# Evaluate homoscedasticity
+# non-constant error variance test
+ncvTest(fit)
+# plot studentized residuals vs. fitted values
+spreadLevelPlot(fit)
+#Multi-collinearity
+# Evaluate Collinearity
+vif(fit) # variance inflation factors
+sqrt(vif(fit)) > 2 # problem?
+#Nonlinearity
+# component + residual plot
+crPlots(fit)
+# Ceres plots
+ceresPlots(fit)
+#Non-independence of Errors
+# Test for Autocorrelated Errors
+durbinWatsonTest(fit)
+
+```
+
+# MODEL ACCURACY
+
+```{r }
+library(gvlma)
+gvmodel <- gvlma(fit)
+summary(gvmodel)
+fit
+summary(fit)
+fit1 <- fit
+fit2 <- lm(Trouble_sleep~Instagram + Snapchat + Twitter, data = lay_data)
+# compare models
+anova(fit1, fit2)
+step <- stepAIC(fit, direction="both")
+step$anova # display results
+library(leaps)
+leaps<-regsubsets(Trouble_sleep~Instagram + Snapchat + Twitter,data=lay_data,nbest=10)
+# view results
+plot(leaps)
+plot(leaps,scale="r2")
+plot(leaps,scale="bic")
+summary(leaps)
+
+```
+
+INSIGHTS : The analysis indicates that whether the variables Instagram, Snapchat, and Twitter are included or excluded from the model, there is no substantial impact on the model's capacity to account for the variance in Trouble_sleep.
+
+
+# MODEL PREDICTION
+
+```{r }
+library(relaimpo)
+calc.relimp(fit,type=c("lmg","last","first","pratt"),
+            rela=TRUE)
+# Bootstrap Measures of Relative Importance (1000 samples)
+boot <- boot.relimp(fit, b = 1000, type = c("lmg",
+                                            "last", "first", "pratt"), rank = TRUE,
+                    diff = TRUE, rela = TRUE)
+booteval.relimp(boot) # print result
+plot(booteval.relimp(boot,sort=TRUE)) # plot result
+#https://rpubs.com/davoodastaraky/mtRegression
+summary(fit)
+predict.lm(fit, data.frame(Instagram =0.2 ,Snapchat=0.1,Twitter=0.5) )
+
+
+
+
+
+```
+
+INSIGHTS : The model predicts that the Trouble_sleep variable will have a value of approximately 0.2391868.
+
+
+This suggests that when the Instagram variable is 0.2, Snapchat is 0.1, and Twitter is 0.5, the model predicts that the Trouble_sleep variable will be approximately 0.2391868.
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+```{r }
+
+
+```
+
+```{r }
+
+
+```
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
+
+
+```{r }
+
+
+```
