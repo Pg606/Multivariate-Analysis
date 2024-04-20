@@ -1,0 +1,353 @@
+---
+title: "Logistic Regression Social Media"
+author: "pg606@scarletmail.rutgers.edu"
+date: "2024-04-19"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+
+library(cowplot)
+#library(regclass)
+library(caret)
+library(e1071)
+library(pROC)
+
+
+data <- read.csv("/Users/Prateekg/Documents/MVA/Midterm_new.csv", row.names=1)
+data
+head(data) # you see data, but no column names
+
+```
+
+
+```{r}
+## Data Cleansing and Prep
+colnames(data) <- c("Instagram", "LinkedIn", "Snapchat", "Twitter", "Whatsapp", "Youtube", "OTT", "Reddit", "Trouble_sleep", "Mood", "Tired_morning")
+
+head(data)
+str(data)
+
+```
+
+
+
+
+Data Cleaning:
+
+
+```{r}
+# DATA CLEANING
+
+data[data == "?"] <- NA
+data$Instagram <- as.factor(data$Instagram)
+data$LinkedIn <- as.factor(data$LinkedIn)
+data$Snapchat <- as.factor(data$Snapchat)
+data$Youtube <- as.factor(data$Youtube)
+data$OTT <- as.factor(data$OTT)
+data$Reddit <- as.factor(data$Reddit)
+data$Trouble_sleep <- as.factor(data$Trouble_sleep)
+data$Mood <- as.factor(data$Mood)
+data$Tired_morning <- as.factor(data$Tired_morning)
+
+data$Instagram <- as.numeric(as.character(data$Instagram))
+data$Instagram <- cut(data$Instagram, breaks = c(-Inf, 6, Inf), labels = c("Less hours", "More hours"))
+
+data$LinkedIn <- as.numeric(as.character(data$LinkedIn))
+data$LinkedIn <- cut(data$LinkedIn, breaks = c(-Inf, 6, Inf), labels = c("Less hours", "More hours"))
+
+
+data$Snapchat <- as.numeric(as.character(data$Snapchat))
+data$Snapchat <- cut(data$Snapchat, breaks = c(-Inf, 6, Inf), labels = c("Less hours", "More hours"))
+
+
+data$Twitter <- as.numeric(as.character(data$Twitter))
+data$Twitter <- cut(data$Twitter, breaks = c(-Inf, 4, Inf), labels = c("Less hours", "More hours"))
+
+data$Whatsapp <- as.numeric(as.character(data$Whatsapp))
+data$Whatsapp <- cut(data$Whatsapp, breaks = c(-Inf, 6, Inf), labels = c("Less hours", "More hours"))
+
+data$OTT <- as.numeric(as.character(data$OTT))
+data$OTT <- cut(data$OTT, breaks = c(-Inf, 6, Inf), labels = c("Less hours", "More hours"))
+
+data$Reddit <- as.numeric(as.character(data$Reddit))
+data$Reddit <- cut(data$Reddit, breaks = c(-Inf, 6, Inf), labels = c("Less hours", "More hours"))
+
+data$Youtube <- as.numeric(as.character(data$Youtube))
+data$Youtube <- cut(data$Youtube, breaks = c(-Inf, 6, Inf), labels = c("Less hours", "More hours"))
+
+str(data)
+```
+
+# MODEL DEVELOPMENT
+
+Logistic Regression Model:
+
+A logistic regression model is fitted to predict the likelihood of experiencing trouble sleeping based on Twitter usage hours.
+
+```{r}
+## Exploratory Analysis
+
+xtabs(~ Trouble_sleep + Instagram, data=data) 
+xtabs(~ Trouble_sleep + LinkedIn, data=data)
+xtabs(~ Trouble_sleep + Snapchat, data=data)
+xtabs(~ Trouble_sleep + Twitter, data=data)
+xtabs(~ Trouble_sleep + Youtube, data=data)
+xtabs(~ Trouble_sleep + OTT, data=data)
+xtabs(~ Trouble_sleep + Reddit, data=data)
+
+
+logistic_simple <- glm(Trouble_sleep ~ Twitter, data=data, family="binomial")
+summary(logistic_simple)
+```
+The logistic regression analysis highlights the significance of the intercept coefficient (-1.1787) at the 0.05 threshold, revealing that reduced Twitter usage significantly impacts the probability of encountering sleep disturbances. Furthermore, the coefficient associated with "TwitterMore hours" (2.2773) implies a rise in the odds of sleep troubles with increased Twitter activity, though it fails to reach statistical significance at the conventional 0.05 level (p-value = 0.0772).
+
+
+#MODEL ACCEPTANCE 
+
+```{r}
+Less_hours.log.odds <- log(4 / 13)
+Less_hours.log.odds
+# Now you know how these are calculated
+more_hours.log.odds.ratio <- log((3 / 1) / (4/13))
+more_hours.log.odds.ratio
+
+```
+
+Insights-
+
+Insights suggest that the intercept coefficient signifies the log-odds of encountering difficulty sleeping with "Less hours" of Twitter usage. The estimated value stands at -1.1787, accompanied by a standard error of 0.5718. A noteworthy p-value of 0.0393 indicates the significance of this coefficient at a 0.05 significance level, affirming that reduced Twitter usage hours notably impact the likelihood of experiencing sleep troubles.
+
+Regarding the coefficient for "TwitterMore hours," it portrays the shift in log-odds concerning trouble sleeping as Twitter usage extends to "More hours." With an estimate of 2.2773 and a standard error of 1.2885, though the coefficient indicates a positive trend, implying heightened odds of sleep issues with increased Twitter usage, it lacks statistical significance at the customary 0.05 threshold (p-value = 0.0772).
+
+
+# PREDICTION
+
+```{r}
+predicted.data <- data.frame(probability.of.hd=logistic_simple$fitted.values,Twitter=data$Twitter)
+predicted.data
+
+xtabs(~ probability.of.hd + Twitter, data=predicted.data)
+logistic <- glm(Trouble_sleep ~ ., data=data, family="binomial")
+summary(logistic)
+```
+
+INSIGHTS :
+
+The forecasted.data set displays the forecasted probabilities of encountering sleep difficulties for each user, paired with their respective Twitter activity categories. For instance:
+Users with handles "masinl," "peace," and "tl868," investing more time on Twitter, exhibit forecasted probabilities of 0.75.
+Meanwhile, users "Patty" and "Bunny," allocating fewer hours on Twitter, demonstrate forecasted probabilities of 0.235..
+
+
+# RESIDUAL ANALYSIS
+
+```{r}
+## Now calculate the overall "Pseudo R-squared" and its p-value
+ll.null <- logistic$null.deviance/-2
+ll.proposed <- logistic$deviance/-2
+(ll.null - ll.proposed) / ll.null
+## The p-value for the R^2
+1 - pchisq(2*(ll.proposed - ll.null), df=(length(logistic$coefficients)-1))
+predicted.data <- data.frame(probability.of.hd=logistic$fitted.values,Trouble_sleep=data$Trouble_sleep)
+predicted.data <- predicted.data[order(predicted.data$probability.of.hd, decreasing=FALSE),]
+predicted.data$rank <- 1:nrow(predicted.data)
+
+ggplot(data=predicted.data, aes(x=rank, y=probability.of.hd)) +
+  geom_point(aes(color=Trouble_sleep), alpha=1, shape=4, stroke=2) +
+  xlab("Index") +
+  ylab("Predicted probability of getting in sleeping")
+```
+
+INSIGHTS : The pseudo R-squared value is calculated to evaluate the goodness of fit of the logistic regression model.
+
+The computed result stands at around 0.8963, revealing that the model accounts for roughly 89.63% of the variability in the response variable. With a p-value of 0.0077 linked to the pseudo R-squared, it implies that the model holds statistical significance in elucidating the variance in the response variable.
+
+
+```{r}
+# From Caret
+pdata <- predict(logistic,newdata=data,type="response" )
+pdata
+data$Trouble_sleep
+pdataF <- as.factor(ifelse(test=as.numeric(pdata>0.5) == 0, yes="0", no="1"))
+
+
+```
+
+INSIGHTS :
+
+ Predicted probabilities are transformed into factors (pdataF) by assessing them against a threshold of 0.5. Values exceeding 0.5 are labeled as 1 (suggesting trouble sleeping), while those below 0.5 are labeled as 0 (suggesting no trouble sleeping).
+
+#MODEL ACCURACY
+
+```{r}
+confusionMatrix(pdataF, data$Trouble_sleep)
+# From pROC
+roc(data$Trouble_sleep,logistic$fitted.values,plot=TRUE)
+par(pty = "s")
+roc(data$Trouble_sleep,logistic$fitted.values,plot=TRUE)
+roc(data$Trouble_sleep,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE)
+roc(data$Trouble_sleep,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage")
+
+roc(data$Trouble_sleep,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage", col="#377eb8", lwd=4)
+roc(data$Trouble_sleep,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage", col="#377eb8", lwd=4)
+
+roc.info <- roc(data$Trouble_sleep, logistic$fitted.values, legacy.axes=TRUE)
+str(roc.info)
+## tpp = true positive percentage
+## fpp = false positive precentage
+roc.df <- data.frame(tpp=roc.info$sensitivities*100, fpp=(1 - roc.info$specificities)*100,thresholds=roc.info$thresholds)
+roc.df
+head(roc.df)
+```
+
+INSIGHTS : The model demonstrates an impressive overall accuracy rate of about 95.24%, showcasing its proficiency in predicting trouble sleeping status accurately for the majority of observations.
+
+Moreover, the area under the ROC curve (AUC), which evaluates the model's capacity to distinguish between positive and negative cases, stands at approximately 0.9949 in this instance, suggesting exceptional discrimination capabilities.
+
+The ROC curve visually represents the fluctuation of the model's sensitivity and specificity across various threshold values used for classifying observations.
+
+```{r}
+
+tail(roc.df) 
+
+roc.df[roc.df$tpp > 60 & roc.df$tpp < 80,]
+roc(data$Trouble_sleep,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage", col="#377eb8", lwd=4, percent=TRUE)
+roc(data$Trouble_sleep,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage", col="#377eb8", lwd=4, percent=TRUE, print.auc=TRUE)
+roc(data$Trouble_sleep,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage", col="#377eb8", lwd=4, percent=TRUE, print.auc=TRUE, partial.auc=c(100, 90), auc.polygon = TRUE, auc.polygon.col = "#377eb822", print.auc.x=45)
+# Lets do two roc plots to understand which model is better
+roc(data$Trouble_sleep, logistic_simple$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage", col="#377eb8", lwd=4, print.auc=TRUE)
+# Lets add the other graph
+plot.roc(data$Trouble_sleep, logistic$fitted.values, percent=TRUE, col="#4daf4a", lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=40)
+legend("bottomright", legend=c("Simple", "Non Simple"), col=c("#377eb8", "#4daf4a"), lwd=4) 
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
