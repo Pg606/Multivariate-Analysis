@@ -1,0 +1,334 @@
+---
+title: "Logistic Regression salary"
+author: "pg606@scarletmail.rutgers.edu"
+date: "2024-04-19"
+output: html_document
+---
+
+```{r }
+library(ggplot2)
+
+library(cowplot)
+#library(regclass)
+library(caret)
+library(e1071)
+library(pROC)
+
+
+data <- read.csv("/Users/Prateekg/Documents/MVA/Salary_multiple_regression.csv", row.names=1)
+data
+head(data) # you see data, but no column names
+
+```
+
+```{r }
+## Data Cleansing and Prep
+colnames(data) <- c("Job_Category", "salary_currency", "Employee_residence", "Experience_level", "Emp_type", "work_setting", "location", "company_size", "salary_Level","work_year","salary","salary_usd","salary_level")
+
+head(data)
+str(data)
+
+
+# DATA CLEANING
+
+data[data == "?"] <- NA
+data$Job_Category <- as.factor(data$Job_Category)
+data$salary_currency <- as.factor(data$salary_currency)
+data$Employee_residence <- as.factor(data$Employee_residence)
+data$Experience_level<- as.factor(data$Experience_level)
+data$Emp_type <- as.factor(data$Emp_type)
+data$work_setting<- as.factor(data$work_setting)
+data$location <- as.factor(data$location)
+data$company_size <- as.factor(data$company_size)
+data$salary_Level <- as.factor(data$salary_Level)
+data$work_year<- as.factor(data$work_year)
+data$salary <- as.factor(data$salary)
+data$salary_usd <- as.factor(data$salary_usd)
+data$salary_level <- as.factor(data$salary_level)
+
+data$work_year <- as.numeric(as.character(data$work_year))
+data$work_year <- cut(data$work_year, breaks = c(-Inf, 2015, Inf), labels = c("Before 2015", "After 2015"))
+
+data$salary <- as.numeric(as.character(data$salary))
+data$salary <- cut(data$salary, breaks = c(-Inf, 150000, Inf), labels = c("Less salary", "More salary"))
+
+data$salary_usd <- as.numeric(as.character(data$salary_usd))
+data$salary_usd<- cut(data$salary_usd, breaks = c(-Inf, 150000, Inf), labels = c("Less salary", "More salary"))
+
+
+str(data)
+```
+
+#Model Development
+
+```{r }
+## Exploratory Analysis
+
+xtabs(~ salary_level + Job_Category, data=data) 
+xtabs(~ salary_level + salary_currency, data=data)
+xtabs(~ salary_level + Employee_residence, data=data)
+xtabs(~ salary_level + Experience_level, data=data)
+xtabs(~ salary_level + Emp_type, data=data)
+xtabs(~ salary_level + work_setting, data=data)
+xtabs(~ salary_level + location, data=data)
+xtabs(~ salary_level + company_size, data=data)
+xtabs(~ salary_level + salary_Level, data=data)
+xtabs(~ salary_level + work_year, data=data)
+xtabs(~ salary_level + salary, data=data)
+xtabs(~ salary_level + salary_usd, data=data)
+
+
+
+logistic_simple <- glm(salary_level ~ Experience_level, data=data, family="binomial")
+summary(logistic_simple)
+```
+Insights-
+
+The Intercept represents the log odds of the baseline group (Mid-level experience) having a salary level of 1 (presumably higher salary) versus 0 (lower salary).
+
+AIC is used as a measure of the model's goodness of fit, where lower values indicate a better fit. The AIC value here is 17.38.
+The p-values associated with each coefficient indicate whether they are significantly different from zero. In this case, neither the Intercept nor the coefficient for Experience_levelSenior are statistically significant (p > 0.05), suggesting that there may not be a significant relationship between experience level and salary level based on this simple model.
+
+
+# Model acceptance
+
+```{r }
+Less_salary_level.log.odds <- log(4/ 3)
+Less_salary_level.log.odds
+# Now you know how these are calculated
+more_salary_level.log.odds.ratio <- log((2 / 1) / (4/3))
+more_salary_level.log.odds.ratio
+
+```
+
+The Less_salary_level.log.odds value represents the log odds of having a lower salary level compared to a higher one. The calculated value is approximately 0.2877.
+
+The more_salary_level.log.odds.ratio represents the log odds ratio of having a higher salary level compared to a lower one. The calculated value is approximately 0.4055.
+
+
+# PREDICTION
+
+```{r }
+predicted.data <- data.frame(probability.of.hd=logistic_simple$fitted.values,Experience_level=data$Experience_level)
+predicted.data
+
+xtabs(~ probability.of.hd + Experience_level, data=predicted.data)
+logistic <- glm(salary_level ~ ., data=data, family="binomial")
+summary(logistic)
+
+```
+
+The probabilities range from approximately 0.57 to 0.67 for different observations.
+
+There are 7 observations with a predicted probability around 0.57 in the "Mid-level" experience category and no observations with a predicted probability around 0.67 in the "Senior" experience category.
+
+Individuals categorized as "Mid-level" have a predicted probability of 0.5714286, while individuals categorized as "Senior" have a predicted probability of 0.6666667.
+
+
+
+
+#Residual Analysis
+
+```{r }
+## Now calculate the overall "Pseudo R-squared" and its p-value
+ll.null <- logistic$null.deviance/-2
+ll.proposed <- logistic$deviance/-2
+(ll.null - ll.proposed) / ll.null
+## The p-value for the R^2
+1 - pchisq(2*(ll.proposed - ll.null), df=(length(logistic$coefficients)-1))
+predicted.data <- data.frame(probability.of.hd=logistic$fitted.values,salary_level=data$salary_level)
+predicted.data <- predicted.data[order(predicted.data$probability.of.hd, decreasing=FALSE),]
+predicted.data$rank <- 1:nrow(predicted.data)
+
+ggplot(data=predicted.data, aes(x=rank, y=probability.of.hd)) +
+  geom_point(aes(color=salary_level), alpha=1, shape=4, stroke=2) +
+  xlab("Index") +
+  ylab("Predicted probability of salary level")
+
+pdata <- predict(logistic,newdata=data,type="response" )
+pdata
+data$salary_level
+pdataF <- as.factor(ifelse(test=as.numeric(pdata>0.5) == 0, yes="0", no="1"))
+```
+
+The pseudo R-squared value is calculated to be 1, indicating that the model explains all the variance in the data. However, such a high value may suggest overfitting or other issues with the model.
+
+
+The associated p-value for the R-squared statistic is approximately 0.958, indicating that the observed improvement in model fit compared to the null model is statistically significant.
+
+
+
+#Model Accuracy
+
+
+
+```{r }
+
+confusionMatrix(pdataF, data$salary_level)
+# From pROC
+roc(data$salary_level,logistic$fitted.values,plot=TRUE)
+par(pty = "s")
+roc(data$salary_level,logistic$fitted.values,plot=TRUE)
+
+
+roc(data$salary_level,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE)
+roc(data$salary_level,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage")
+
+roc(data$salary_level,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage", col="#377eb8", lwd=4)
+roc(data$salary_level,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage", col="#377eb8", lwd=4)
+## If we want to find out the optimal threshold we can store the
+## data used to make the ROC graph in a variable...
+roc.info <- roc(data$salary_level, logistic$fitted.values, legacy.axes=TRUE)
+str(roc.info)
+## tpp = true positive percentage
+## fpp = false positive precentage
+roc.df <- data.frame(tpp=roc.info$sensitivities*100, fpp=(1 - roc.info$specificities)*100,thresholds=roc.info$thresholds)
+roc.df
+head(roc.df) 
+
+tail(roc.df) 
+
+roc.df[roc.df$tpp > 60 & roc.df$tpp < 80,]
+roc(data$salary_level,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage", col="#377eb8", lwd=4, percent=TRUE)
+roc(data$salary_level,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage", col="#377eb8", lwd=4, percent=TRUE, print.auc=TRUE)
+roc(data$salary_level,logistic$fitted.values,plot=TRUE, legacy.axes=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage", col="#377eb8", lwd=4, percent=TRUE, print.auc=TRUE, partial.auc=c(100, 90), auc.polygon = TRUE, auc.polygon.col = "#377eb822", print.auc.x=45)
+# Lets do two roc plots to understand which model is better
+roc(data$salary_level, logistic_simple$fitted.values, plot=TRUE, legacy.axes=TRUE, percent=TRUE, xlab="False Positive Percentage", ylab="True Postive Percentage", col="#377eb8", lwd=4, print.auc=TRUE)
+# Lets add the other graph
+plot.roc(data$salary_level, logistic$fitted.values, percent=TRUE, col="#4daf4a", lwd=4, print.auc=TRUE, add=TRUE, print.auc.y=40)
+legend("bottomright", legend=c("Simple", "Non Simple"), col=c("#377eb8", "#4daf4a"), lwd=4) 
+
+```
+
+There are 4 true negatives (predicted salary level 0 and actual salary level 0) and 6 true positives (predicted salary level 1 and actual salary level 1).
+
+There are no false positives or false negatives, indicating perfect accuracy.
+
+The area under the ROC curve (AUC) is a measure of the model's discriminatory power. An AUC of 1 indicates a perfect classifier, while 0.5 suggests a random classifier.
+
+The AUC value for the second model is 54.17%, which is significantly lower than the AUC of the current model (100%).
+
+```{r }
+
+```
+
+
+
+```{r }
+
+```
+
+
+
+```{r }
+
+```
+
+
+
+```{r }
+
+```
+
+
+
+```{r }
+
+```
+
+
+
+```{r }
+
+```
+
+
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+
+
+```{r }
+
+```
+
+
+
+```{r }
+
+```
+
+
+
+```{r }
+
+```
+
+
+
+```{r }
+
+```
+
+
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+
+```{r }
+
+```
