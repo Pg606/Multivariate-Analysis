@@ -1,0 +1,188 @@
+---
+title: "LDA_Salary"
+author: "pg606@scarletmail.rutgers.edu"
+date: "2024-04-26"
+output: html_document
+---
+
+```{r }
+library(MASS)
+library(ggplot2)
+library(memisc)
+library(ROCR)
+library(dplyr)
+library(klaR)
+
+wdbc <- read.csv("/Users/Prateekg/Documents/MVA/Salary_multiple_regression.csv")
+dim(wdbc)
+str(wdbc)
+features <- c("Category", "Currency", "EmpResidence","ExpLevel", "EmpType", "WorkSetting", "location", "size", "level", "year", "salary", "USD", "SalaryLevel")
+names(wdbc) <- c("Title", "Category", "Currency", "EmpResidence","ExpLevel", "EmpType", "WorkSetting", "location", "size", "level", "year", "salary", "USD", "SalaryLevel")
+
+```
+
+#Model development
+
+```{r }
+wdbc.data <- as.matrix(wdbc[,c(11:13)])
+row.names(wdbc.data) <- wdbc$Title
+wdbc_raw <- cbind(wdbc.data, as.numeric(as.factor(wdbc$SalaryLevel))-1)
+colnames(wdbc_raw)[4] <- "EmpSalaryLevel"
+smp_size_raw <- floor(0.75 * nrow(wdbc_raw))
+train_ind_raw <- sample(nrow(wdbc_raw), size = smp_size_raw)
+train_raw.df <- as.data.frame(wdbc_raw[train_ind_raw, ])
+test_raw.df <- as.data.frame(wdbc_raw[-train_ind_raw, ])
+wdbc_raw.lda <- lda(formula = train_raw.df$EmpSalaryLevel ~ ., data = train_raw.df)
+wdbc_raw.lda
+
+```
+
+Split the dataset into training and testing sets.
+Examine the output of the trained LDA model to understand the prior probabilities of groups, group means, and coefficients of linear discriminants.
+Interpret the coefficients to understand the impact of each predictor on the salary level prediction.
+
+
+#Model Acceptance
+
+
+```{r }
+summary(wdbc_raw.lda)
+print(wdbc_raw.lda)
+plot(wdbc_raw.lda)
+
+```
+
+Group means indicate the average values of predictor variables for each salary level class.
+For class 0 (low salary), the average year is 2016, salary is $60,000, and USD is $60,000.
+For class 1 (high salary), the average year is 2018, salary is $265,800, and USD is $265,800.
+These differences suggest notable variations in salary-related variables between the two salary levels.
+#Accuracy
+
+```{r }
+wdbc_raw.lda.predict_train <- predict(wdbc_raw.lda, newdata = train_raw.df)
+y<-wdbc_raw.lda.predict_train$class
+wdbc_raw.lda.predict_train$x
+table(y,train_raw.df$EmpSalaryLevel)
+
+```
+
+
+
+
+```{r }
+
+wdbc_raw.lda.predict <- predict(wdbc_raw.lda, newdata = test_raw.df)
+y<-wdbc_raw.lda.predict$class
+wdbc_raw.lda.predict$x
+table(y,test_raw.df$EmpSalaryLevel)
+```
+
+Both the training and test set accuracies are 100%, indicating that the model perfectly classified all instances in both datasets.
+
+
+#Residual Analysis
+
+```{r }
+# Get the posteriors as a dataframe.
+wdbc_raw.lda.predict.posteriors <- as.data.frame(wdbc_raw.lda.predict$posterior)
+```
+
+Residual analysis to refine the model, such as adjusting predictor variables, exploring different modeling techniques, or collecting additional data.
+
+
+#Prediction
+```{r }
+pred <- prediction(wdbc_raw.lda.predict.posteriors[1:3,2], test_raw.df$EmpSalaryLevel)
+
+
+roc.perf = performance(pred, measure = "tpr", x.measure = "fpr")
+auc.train <- performance(pred, measure = "auc")
+auc.train <- auc.train@y.values
+plot(roc.perf)
+abline(a=0, b= 1)
+text(x = .25, y = .65 ,paste("AUC = ", round(auc.train[[1]],3), sep = ""))
+
+```
+
+
+```{r }
+plot(wdbc_raw.lda, col = as.integer(train_raw.df$EmpSalaryLevel))
+
+plot(wdbc_raw.lda, dimen = 1, type = "b")
+
+m <- manova(cbind(wdbc$year,wdbc$salary,wdbc$USD)~wdbc$SalaryLevel,data=wdbc)
+summary(m,test="Wilks")
+
+summary(m,test="Pillai")
+
+summary.aov(m)
+```
+
+The ROC curve and AUC value provide insights into the discriminative performance of the LDA model. A higher AUC suggests better separation between the two salary levels.
+The plots of the LDA model visualize how well the model separates the data points belonging to different salary levels.
+The MANOVA results indicate whether there are significant differences in predictor variables across different salary levels. Significant p-values suggest that at least one predictor variable differs significantly between salary levels.
+
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+```{r }
+
+```
+
+
+```{r }
+
+```
+
+
+
+```{r }
+
+```
